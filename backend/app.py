@@ -51,10 +51,15 @@ def load_existing_csvs():
             df_res = pd.read_csv(RESULTS_CSV)
             SWEEP_RESULTS = df_res.to_dict(orient="records")
             print(f"[STARTUP] Loaded {len(SWEEP_RESULTS)} results from {RESULTS_CSV}")
-        if os.path.exists(BEST_CSV):
-            df_best = pd.read_csv(BEST_CSV)
-            BEST_PER_TICKER = df_best.to_dict(orient="records")
-            print(f"[STARTUP] Loaded {len(BEST_PER_TICKER)} best ticker records from {BEST_CSV}")
+            
+            if 'ticker' in df_res.columns:
+                best_per_ticker_df = df_res.loc[df_res.groupby('ticker')['win_rate'].idxmax()].reset_index(drop=True)
+                best_per_ticker_df = best_per_ticker_df.sort_values('win_rate', ascending=False)
+                best_per_ticker_df.to_csv(BEST_CSV, index=False)
+                BEST_PER_TICKER = best_per_ticker_df.to_dict(orient="records")
+                print(f"[STARTUP] Recalculated {len(BEST_PER_TICKER)} best tickers with correct 'ticker' column.")
+            else:
+                print("[STARTUP ERROR] 'ticker' column missing in results CSV.")
     except Exception as e:
         print(f"[STARTUP WARN] Failed to load startup CSVs: {e}")
 
@@ -118,7 +123,7 @@ def run_full_sweep_worker(apikey: str):
         rdf.to_csv(RESULTS_CSV, index=False)
         SWEEP_RESULTS = rdf.to_dict(orient="records")
         
-        best_per_ticker_df = rdf.groupby('ticker').apply(lambda x: x.loc[x['win_rate'].idxmax()]).reset_index(drop=True)
+        best_per_ticker_df = rdf.loc[rdf.groupby('ticker')['win_rate'].idxmax()].reset_index(drop=True)
         best_per_ticker_df = best_per_ticker_df.sort_values('win_rate', ascending=False)
         best_per_ticker_df.to_csv(BEST_CSV, index=False)
         BEST_PER_TICKER = best_per_ticker_df.to_dict(orient="records")

@@ -1,6 +1,6 @@
 :root {
   --bg-primary: #06080e;
-  --bg-card: #0c101c;
+  --bg-card: #0d111e;
   --bg-card-hover: #12182b;
   --bg-card-subtle: #0d1222;
   --color-primary: #bef264;      /* Glowing neon lime green */
@@ -23,8 +23,8 @@
   --text-dim: #4b5872;
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Outfit', sans-serif;
-  --shadow-neon: 0 0 15px rgba(190, 242, 100, 0.15);
-  --shadow-neon-strong: 0 0 25px rgba(190, 242, 100, 0.35);
+  --shadow-neon: 0 0 15px rgba(190, 242, 100, 0.08);
+  --shadow-neon-strong: 0 0 25px rgba(190, 242, 100, 0.25);
   --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -70,11 +70,11 @@ h1, h2, h3, h4, .font-display {
 
 /* Premium Card Layout */
 .glow-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(145deg, #0e1222, #070912);
+  border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   transition: var(--transition-smooth);
   position: relative;
   overflow: hidden;
@@ -86,20 +86,44 @@ h1, h2, h3, h4, .font-display {
   top: 0;
   left: 0;
   width: 100%;
-  height: 2px;
+  height: 1px;
   background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
   opacity: 0;
   transition: var(--transition-smooth);
 }
 
 .glow-card:hover {
-  border-color: var(--border-glow-active);
-  box-shadow: var(--shadow-neon), 0 10px 40px rgba(0, 0, 0, 0.6);
+  border-color: rgba(190, 242, 100, 0.12);
+  box-shadow: 0 0 20px rgba(190, 242, 100, 0.05), 0 15px 50px rgba(0, 0, 0, 0.6);
   transform: translateY(-2px);
 }
 
 .glow-card:hover::before {
   opacity: 1;
+}
+
+/* Custom Tactical Select Dropdown styling */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23bef264' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px !important;
+  font-family: var(--font-display);
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+select:hover, select:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-neon);
 }
 
 /* Glassmorphism utility */
@@ -126,7 +150,7 @@ h1, h2, h3, h4, .font-display {
 }
 
 .heatmap-cell:hover {
-  transform: scale(1.1);
+  transform: scale(1.08);
   box-shadow: var(--shadow-neon-strong);
   z-index: 10;
   border-color: var(--color-primary);

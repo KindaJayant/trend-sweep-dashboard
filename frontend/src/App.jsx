@@ -270,7 +270,11 @@ export default function App() {
             }}
           >
             <span>PARAMETER EXPLORER</span>
-            {activeTab === 'explorer' && <span style={{ color: 'var(--color-primary)' }}>➔</span>}
+            {activeTab === 'explorer' && (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-primary)' }}>
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('leaderboard')}
@@ -292,7 +296,11 @@ export default function App() {
             }}
           >
             <span>TICKER LEADERBOARD</span>
-            {activeTab === 'leaderboard' && <span style={{ color: 'var(--color-primary)' }}>➔</span>}
+            {activeTab === 'leaderboard' && (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-primary)' }}>
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            )}
           </button>
         </nav>
 
@@ -315,31 +323,47 @@ export default function App() {
                 {globalData.has_data ? globalData.tickers_available.length : 0}
               </h2>
             </div>
-            <div style={{ fontSize: '1.5rem', color: 'var(--color-primary)' }}>📊</div>
+            {/* SVG Bar Chart Icon */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-primary)', filter: 'drop-shadow(0 0 4px var(--color-primary-glow))' }}>
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
           </div>
 
           <div className="glow-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>AVG SWEEP WIN RATE</span>
               <h2 style={{ fontSize: '1.5rem', color: 'var(--color-win)', marginTop: '0.2rem' }}>
-                {globalData.has_data && globalData.best_per_ticker.length > 0
+                {globalData.has_data && globalData.best_per_ticker && globalData.best_per_ticker.length > 0
                   ? `${(globalData.best_per_ticker.reduce((acc, c) => acc + c.win_rate, 0) / globalData.best_per_ticker.length).toFixed(1)}%`
-                  : 'N/A'}
+                  : '0.0%'}
               </h2>
             </div>
-            <div style={{ fontSize: '1.5rem', color: 'var(--color-win)' }}>📈</div>
+            {/* SVG Line Chart Icon */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-win)', filter: 'drop-shadow(0 0 4px var(--color-win-glow))' }}>
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+              <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
           </div>
 
           <div className="glow-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>TOP PERFORMING TICKER</span>
               <h2 style={{ fontSize: '1.15rem', color: 'var(--color-primary)', marginTop: '0.2rem', fontFamily: 'var(--font-display)', fontWeight: 'bold' }}>
-                {globalData.has_data && globalData.best_per_ticker.length > 0
+                {globalData.has_data && globalData.best_per_ticker && globalData.best_per_ticker.length > 0 && globalData.best_per_ticker[0]?.ticker
                   ? `${globalData.best_per_ticker[0].ticker} (${globalData.best_per_ticker[0].win_rate}%)`
                   : 'N/A'}
               </h2>
             </div>
-            <div style={{ fontSize: '1.5rem', color: 'var(--color-primary)' }}>🏆</div>
+            {/* SVG Trophy Icon */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-primary)', filter: 'drop-shadow(0 0 4px var(--color-primary-glow))' }}>
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+              <path d="M4 22h16"></path>
+              <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"></path>
+              <path d="M12 2a7 7 0 0 0-7 7c0 3.18 2.12 5.86 5 6.71V2h2z"></path>
+            </svg>
           </div>
         </div>
 
@@ -347,7 +371,12 @@ export default function App() {
         {!globalData.has_data && status.status !== 'running' ? (
           /* Empty State */
           <div className="glow-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem', gap: '1.5rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem' }}>🔬</div>
+            {/* SVG Radar Target icon instead of emoji */}
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-primary)', filter: 'drop-shadow(0 0 8px var(--color-primary-glow))' }}>
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="6"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+            </svg>
             <div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No Sweep Results Cached</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '400px', margin: '0 auto' }}>
@@ -389,17 +418,6 @@ export default function App() {
                   <select
                     value={selectedTicker}
                     onChange={e => setSelectedTicker(e.target.value)}
-                    style={{
-                      background: 'var(--bg-card-subtle)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px',
-                      padding: '0.5rem 1rem',
-                      color: 'var(--text-main)',
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 600,
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
                   >
                     {globalData.tickers_available.map(t => (
                       <option key={t} value={t}>{t}</option>
@@ -426,7 +444,7 @@ export default function App() {
                 </div>
 
                 {selectedCombo.data ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'space-around' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-around', width: '100%' }}>
                     <ProgressRing 
                       progress={selectedCombo.data.win_rate} 
                       label="Win Rate" 

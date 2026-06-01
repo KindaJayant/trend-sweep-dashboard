@@ -6,8 +6,16 @@ export default function ProgressRing({ radius = 45, stroke = 6, progress = 0, la
   const strokeDashoffset = circumference - (Math.max(0, Math.min(100, progress)) / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center justify-center relative" style={{ width: radius * 2, height: radius * 2 + (label ? 25 : 0) }}>
-      <div className="relative" style={{ width: radius * 2, height: radius * 2 }}>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      position: 'relative', 
+      width: radius * 2, 
+      height: radius * 2 + (label ? 25 : 0) 
+    }}>
+      <div style={{ position: 'relative', width: radius * 2, height: radius * 2 }}>
         <svg height={radius * 2} width={radius * 2} style={{ transform: 'rotate(-90deg)' }}>
           {/* Track Circle */}
           <circle
@@ -36,17 +44,32 @@ export default function ProgressRing({ radius = 45, stroke = 6, progress = 0, la
           />
         </svg>
         {/* Centered value text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span className="font-display font-bold text-lg" style={{ color: 'var(--text-main)', fontSize: '1.15rem' }}>
+        <div style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
+          <span className="font-display" style={{ 
+            color: 'var(--text-main)', 
+            fontSize: '1.05rem', 
+            fontWeight: 700,
+            fontFamily: 'var(--font-display)'
+          }}>
             {valueText || `${Math.round(progress)}%`}
           </span>
         </div>
       </div>
       {label && (
         <span style={{ 
-          fontSize: '0.75rem', 
+          fontSize: '0.7rem', 
           color: 'var(--text-muted)', 
-          marginTop: '0.4rem', 
+          marginTop: '0.5rem', 
           display: 'block', 
           textAlign: 'center',
           fontFamily: 'var(--font-display)',
