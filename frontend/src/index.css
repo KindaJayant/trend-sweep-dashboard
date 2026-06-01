@@ -88,6 +88,7 @@ h1, h2, h3, h4, .font-display {
   display: flex;
   flex-wrap: wrap;
   gap: 2rem;
+  align-items: flex-start;
 }
 
 .explorer-grid-left {
@@ -298,6 +299,87 @@ select:hover, select:focus {
   animation: pulse-glow 2s infinite ease-in-out;
 }
 
+/* Details stats grid layout */
+.details-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  background: var(--bg-card-subtle);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+/* Trade Logs Table Styles */
+.trade-logs-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trade-logs-container {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.trade-logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.trade-logs-table th {
+  position: sticky;
+  top: 0;
+  background-color: #0e1222;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 2;
+}
+
+.trade-logs-table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-main);
+}
+
+.trade-logs-table tbody tr {
+  transition: var(--transition-smooth);
+}
+
+.trade-logs-table tbody tr:hover {
+  background-color: var(--bg-card-hover);
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    MOBILE RESPONSIVENESS MEDIA QUERIES
    ───────────────────────────────────────────────────────────────────────────── */
@@ -310,35 +392,47 @@ select:hover, select:focus {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border-subtle);
-    padding: 1.25rem;
-    gap: 1.25rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
   }
 
-  /* Compact header layout for sidebar on mobile */
   .app-sidebar > div {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
+    flex-direction: column;
+    flex: 1 1 auto;
+  }
+
+  .app-sidebar .glow-card {
+    flex: 1 1 100%;
+    padding: 0.8rem;
+    margin: 0;
+    order: 3;
   }
 
   .app-sidebar nav {
-    margin-top: 0.5rem !important;
-    display: flex !important;
+    flex: 0 1 auto;
     flex-direction: row !important;
+    margin: 0 !important;
     gap: 0.5rem;
-    width: 100%;
+    order: 2;
   }
 
   .app-sidebar nav button {
-    flex-grow: 1;
-    justify-content: center !important;
-    padding: 0.5rem 0.25rem !important;
+    padding: 0.5rem 0.8rem !important;
     font-size: 0.75rem !important;
   }
 
   .app-sidebar nav button span:last-child {
     display: none; /* Hide chevron on mobile nav */
+  }
+
+  .app-sidebar div[style*="margin-top: auto"] {
+    display: none; /* Hide footer on mobile sidebar */
   }
 
   .app-main {

@@ -34,92 +34,90 @@ export default function HeatmapGrid({ data = [], selectedCombo = null, onSelectC
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '480px', margin: '0 auto' }}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '50px repeat(5, 1fr)',
+      gap: '8px',
+      width: '100%',
+      maxWidth: '480px',
+      margin: '0 auto',
+      alignItems: 'center'
+    }}>
+      {/* Empty corner block for alignment */}
+      <div />
       
       {/* Heatmap Grid Header: SL % */}
-      <div style={{ display: 'flex', marginBottom: '8px' }}>
-        {/* Empty corner block for alignment */}
-        <div style={{ width: '45px', flexShrink: 0 }} />
-        <div style={{ display: 'flex', flexGrow: 1, justifyContent: 'space-around' }}>
-          {SL_VALUES.map(sl => (
-            <div 
-              key={sl} 
-              style={{ 
-                width: '100%', 
-                textAlign: 'center', 
-                fontSize: '0.75rem', 
-                color: 'var(--text-muted)',
-                fontFamily: 'var(--font-display)',
-                fontWeight: 600
-              }}
-            >
-              SL {sl}%
-            </div>
-          ))}
+      {SL_VALUES.map(sl => (
+        <div 
+          key={sl} 
+          style={{ 
+            textAlign: 'center', 
+            fontSize: '0.7rem', 
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            padding: '4px 0',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          SL {sl}%
         </div>
-      </div>
+      ))}
 
       {/* Grid Rows */}
       {TP_VALUES.map(tp => (
-        <div key={tp} style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+        <React.Fragment key={tp}>
           {/* Row Header: TP % */}
           <div 
             style={{ 
-              width: '45px', 
-              fontSize: '0.75rem', 
+              fontSize: '0.7rem', 
               color: 'var(--text-muted)',
               fontFamily: 'var(--font-display)',
               fontWeight: 600,
-              flexShrink: 0
+              textAlign: 'right',
+              paddingRight: '6px',
+              whiteSpace: 'nowrap'
             }}
           >
             TP {tp}%
           </div>
 
           {/* Row Cells */}
-          <div style={{ display: 'flex', flexGrow: 1, gap: '6px' }}>
-            {SL_VALUES.map(sl => {
-              const cell = getCellData(tp, sl);
-              const colorStyle = getCellColorStyle(cell);
-              const isSelected = selectedCombo && selectedCombo.tp === tp && selectedCombo.sl === sl;
-              
-              return (
-                <div
-                  key={sl}
-                  onClick={() => cell && onSelectCombo({ tp, sl, data: cell })}
-                  className="heatmap-cell"
-                  style={{
-                    ...colorStyle,
-                    width: '100%',
-                    paddingTop: '35%', /* Ensure square aspect ratio */
-                    position: 'relative',
-                    border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--border-subtle)',
-                    borderRadius: '6px',
-                    cursor: cell ? 'pointer' : 'default',
-                    opacity: cell ? 1 : 0.3,
-                    transform: isSelected ? 'scale(1.05)' : 'none',
-                    zIndex: isSelected ? 5 : 1,
-                    boxShadow: isSelected ? 'var(--shadow-neon-strong)' : colorStyle.boxShadow
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700
-                  }}>
-                    {cell ? `${cell.win_rate}%` : 'N/A'}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+          {SL_VALUES.map(sl => {
+            const cell = getCellData(tp, sl);
+            const colorStyle = getCellColorStyle(cell);
+            const isSelected = selectedCombo && selectedCombo.tp === tp && selectedCombo.sl === sl;
+            
+            return (
+              <div
+                key={sl}
+                onClick={() => cell && onSelectCombo({ tp, sl, data: cell })}
+                className="heatmap-cell"
+                style={{
+                  ...colorStyle,
+                  aspectRatio: '1', /* Ensure perfect square aspect ratio */
+                  position: 'relative',
+                  border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--border-subtle)',
+                  borderRadius: '6px',
+                  cursor: cell ? 'pointer' : 'default',
+                  opacity: cell ? 1 : 0.3,
+                  transform: isSelected ? 'scale(1.05)' : 'none',
+                  zIndex: isSelected ? 5 : 1,
+                  boxShadow: isSelected ? 'var(--shadow-neon-strong)' : colorStyle.boxShadow,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  transition: 'var(--transition-smooth)'
+                }}
+              >
+                {cell ? `${cell.win_rate}%` : 'N/A'}
+              </div>
+            );
+          })}
+        </React.Fragment>
       ))}
     </div>
   );

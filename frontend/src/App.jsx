@@ -130,6 +130,12 @@ export default function App() {
         const data = await res.json();
         setEquityData(data.equity_curve);
         setTradeLogs(data.trades);
+        if (data.summary) {
+          setSelectedCombo(prev => ({
+            ...prev,
+            data: data.summary
+          }));
+        }
       } else {
         setEquityData(null);
         setTradeLogs([]);
@@ -172,17 +178,17 @@ export default function App() {
           SIDEBAR / STATUS REGION
           ─────────────────────────────────────────────────────────────────────── */}
       <aside className="app-sidebar">
-        <div>
-          <h1 style={{ color: 'var(--color-primary)', fontSize: '1.25rem', letterSpacing: '0.05em', lineHeight: '1.2' }}>
+        <div className="sidebar-header">
+          <h1 className="sidebar-logo">
             MAGIC TREND
           </h1>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.15em' }}>
+          <span className="sidebar-subtitle">
             QUANTITATIVE SWEEP
           </span>
         </div>
 
         {/* Dynamic Status Dashboard Card */}
-        <div className="glow-card" style={{ padding: '1.2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="glow-card sidebar-status-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{
               width: '8px',
@@ -240,7 +246,7 @@ export default function App() {
         </div>
 
         {/* Tab Buttons */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+        <nav className="sidebar-nav">
           <button
             onClick={() => setActiveTab('explorer')}
             style={{
@@ -295,7 +301,7 @@ export default function App() {
           </button>
         </nav>
 
-        <div style={{ marginTop: 'auto', fontSize: '0.65rem', color: 'var(--text-dim)', textAlign: 'center' }}>
+        <div className="sidebar-footer">
           v1.0.0 Stable API
         </div>
       </aside>
@@ -461,24 +467,48 @@ export default function App() {
                 )}
 
                 {selectedCombo.data && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'var(--bg-card-subtle)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>TOTAL TRADES</span>
-                      <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>{selectedCombo.data.trades}</span>
+                  <div className="details-stats-grid">
+                    <div className="stat-item">
+                      <span className="stat-label">TOTAL TRADES</span>
+                      <span className="stat-value">{selectedCombo.data.trades}</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>AVG PNL / TRADE</span>
-                      <span style={{ fontSize: '1rem', fontWeight: 'bold', color: selectedCombo.data.avg_pnl >= 0 ? 'var(--color-win)' : 'var(--color-loss)' }}>
+                    <div className="stat-item">
+                      <span className="stat-label">AVG PNL / TRADE</span>
+                      <span className="stat-value" style={{ color: selectedCombo.data.avg_pnl >= 0 ? 'var(--color-win)' : 'var(--color-loss)' }}>
                         {selectedCombo.data.avg_pnl}%
                       </span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>MAX DRAWDOWN</span>
-                      <span style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-loss)' }}>-{selectedCombo.data.max_dd}%</span>
+                    <div className="stat-item">
+                      <span className="stat-label">MAX DRAWDOWN</span>
+                      <span className="stat-value" style={{ color: 'var(--color-loss)' }}>-{selectedCombo.data.max_dd}%</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>CALMAR RATIO</span>
-                      <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>{selectedCombo.data.calmar}</span>
+                    <div className="stat-item">
+                      <span className="stat-label">CALMAR RATIO</span>
+                      <span className="stat-value">{selectedCombo.data.calmar}</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">AVG WIN / LOSS</span>
+                      <span className="stat-value">
+                        <span style={{ color: 'var(--color-win)' }}>{selectedCombo.data.avg_win}%</span>
+                        {" / "}
+                        <span style={{ color: 'var(--color-loss)' }}>{selectedCombo.data.avg_loss}%</span>
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">BEST / WORST</span>
+                      <span className="stat-value">
+                        <span style={{ color: 'var(--color-win)' }}>{selectedCombo.data.best}%</span>
+                        {" / "}
+                        <span style={{ color: 'var(--color-loss)' }}>{selectedCombo.data.worst}%</span>
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">AVG HOLD TIME</span>
+                      <span className="stat-value">{selectedCombo.data.avg_hold} Days</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">FINAL CAPITAL</span>
+                      <span className="stat-value">₹{Math.round(selectedCombo.data.final_cap || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 )}
@@ -523,6 +553,70 @@ export default function App() {
                 )}
               </div>
 
+            </div>
+
+            {/* Trade History Logs */}
+            <div className="glow-card trade-logs-card">
+              <div>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>DETAILED TRADE HISTORY LOGS</h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Chronological list of all closed-out trades for the selected combination.</p>
+              </div>
+
+              {loadingEquity ? (
+                <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                  Loading Trade Logs...
+                </div>
+              ) : !tradeLogs || tradeLogs.length === 0 ? (
+                <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                  No trades recorded for this parameter configuration.
+                </div>
+              ) : (
+                <div className="trade-logs-container">
+                  <table className="trade-logs-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>ENTRY DATE</th>
+                        <th>EXIT DATE</th>
+                        <th>ENTRY PRICE</th>
+                        <th>EXIT PRICE</th>
+                        <th>P&L %</th>
+                        <th>HOLD DAYS</th>
+                        <th>EXIT REASON</th>
+                        <th>CAPITAL AFTER</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tradeLogs.map((trade, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                          <td>{trade.entry_date}</td>
+                          <td>{trade.exit_date}</td>
+                          <td>₹{trade.entry_price ? trade.entry_price.toLocaleString() : '0'}</td>
+                          <td>₹{trade.exit_price ? trade.exit_price.toLocaleString() : '0'}</td>
+                          <td style={{ 
+                            fontWeight: 600, 
+                            color: trade.pnl_pct >= 0 ? 'var(--color-win)' : 'var(--color-loss)' 
+                          }}>
+                            {trade.pnl_pct >= 0 ? '+' : ''}{trade.pnl_pct}%
+                          </td>
+                          <td>{trade.hold_days} Days</td>
+                          <td style={{ 
+                            fontWeight: 500,
+                            color: trade.reason === 'TP' ? 'var(--color-win)' :
+                                   trade.reason === 'SL' ? 'var(--color-loss)' :
+                                   trade.reason === 'Score<6' ? 'var(--color-score)' : 'var(--color-time)'
+                          }}>
+                            {trade.reason === 'Score<6' ? 'Indicator Exit' :
+                             trade.reason === 'Time45' ? 'Max Hold Limit' : trade.reason}
+                          </td>
+                          <td>₹{Math.round(trade.capital_after || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
           </div>
