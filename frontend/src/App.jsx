@@ -166,21 +166,12 @@ export default function App() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+    <div className="app-container">
       
       {/* ───────────────────────────────────────────────────────────────────────
           SIDEBAR / STATUS REGION
           ─────────────────────────────────────────────────────────────────────── */}
-      <aside style={{
-        width: '260px',
-        borderRight: '1px solid var(--border-subtle)',
-        background: 'var(--bg-card-subtle)',
-        padding: '1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2rem',
-        flexShrink: 0
-      }}>
+      <aside className="app-sidebar">
         <div>
           <h1 style={{ color: 'var(--color-primary)', fontSize: '1.25rem', letterSpacing: '0.05em', lineHeight: '1.2' }}>
             MAGIC TREND
@@ -312,10 +303,10 @@ export default function App() {
       {/* ───────────────────────────────────────────────────────────────────────
           MAIN DASHBOARD REGION
           ─────────────────────────────────────────────────────────────────────── */}
-      <main style={{ flexGrow: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto' }}>
+      <main className="app-main">
         
         {/* Top Summary Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+        <div className="stats-grid">
           <div className="glow-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>TICKERS RUN</span>
@@ -402,13 +393,13 @@ export default function App() {
           </div>
         ) : (
           /* Parameter Explorer Grid View */
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
             
             {/* Split layout: Selector & Heatmap / Detail stats */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+            <div className="split-layout">
               
               {/* Left Column: Heatmap controls & cells */}
-              <div className="glow-card" style={{ flex: '1 1 450px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="glow-card explorer-grid-left" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>GRID SEARCH SWEEP</h3>
@@ -433,7 +424,7 @@ export default function App() {
               </div>
 
               {/* Right Column: Dynamic selected cell detail dashboard */}
-              <div className="glow-card" style={{ flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="glow-card explorer-grid-right" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>
                     {selectedTicker} DETAILS
@@ -495,10 +486,10 @@ export default function App() {
             </div>
 
             {/* Bottom Row: Charts displaying Equity curve and Exit Reasons */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+            <div className="charts-row">
               
               {/* Equity Line Chart */}
-              <div className="glow-card" style={{ flex: '2 1 500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="glow-card chart-card-large" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1rem', color: 'var(--text-main)' }}>HISTORICAL EQUITY CURVE</h3>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mark-to-market performance tracing starting from ₹100,000.</p>
@@ -513,7 +504,7 @@ export default function App() {
               </div>
 
               {/* Exit Reasons Chart */}
-              <div className="glow-card" style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="glow-card chart-card-small" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1rem', color: 'var(--text-main)' }}>EXIT DISTRIBUTION</h3>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Categorization of exit reasons for all trades.</p>

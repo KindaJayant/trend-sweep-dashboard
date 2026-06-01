@@ -49,6 +49,82 @@ h1, h2, h3, h4, .font-display {
   letter-spacing: -0.02em;
 }
 
+/* Layout Containers */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+.app-sidebar {
+  width: 260px;
+  border-right: 1px solid var(--border-subtle);
+  background-color: var(--bg-card-subtle);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  flex-shrink: 0;
+}
+
+.app-main {
+  flex-grow: 1;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+/* Grids & Flex Containers */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.split-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.explorer-grid-left {
+  flex: 1 1 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.explorer-grid-right {
+  flex: 1 1 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.charts-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  width: 100%;
+}
+
+.chart-card-large {
+  flex: 2 1 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chart-card-small {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -220,4 +296,77 @@ select:hover, select:focus {
 
 .pulse-neon {
   animation: pulse-glow 2s infinite ease-in-out;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MOBILE RESPONSIVENESS MEDIA QUERIES
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 1.25rem;
+    gap: 1.25rem;
+  }
+
+  /* Compact header layout for sidebar on mobile */
+  .app-sidebar > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .app-sidebar nav {
+    margin-top: 0.5rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .app-sidebar nav button {
+    flex-grow: 1;
+    justify-content: center !important;
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .app-sidebar nav button span:last-child {
+    display: none; /* Hide chevron on mobile nav */
+  }
+
+  .app-main {
+    padding: 1rem;
+    gap: 1.5rem;
+    height: auto;
+    overflow-y: visible;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .split-layout {
+    gap: 1.5rem;
+  }
+
+  .explorer-grid-left, .explorer-grid-right {
+    flex: 1 1 100%;
+  }
+
+  .charts-row {
+    gap: 1.5rem;
+    flex-direction: column;
+  }
+
+  .chart-card-large, .chart-card-small {
+    flex: 1 1 100%;
+  }
 }
