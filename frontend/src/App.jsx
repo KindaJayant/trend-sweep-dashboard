@@ -1,0 +1,526 @@
+import React, { useState, useEffect } from 'react';
+import ProgressRing from './components/ProgressRing';
+import HeatmapGrid from './components/HeatmapGrid';
+import EquityLineChart from './components/EquityLineChart';
+import ExitReasonChart from './components/ExitReasonChart';
+import LeaderboardTable from './components/LeaderboardTable';
+
+const API_BASE = "http://localhost:8000";
+
+export default function App() {
+  // Main Navigation State
+  const [activeTab, setActiveTab] = useState('explorer'); // 'explorer' or 'leaderboard'
+  
+  // Backtest status state
+  const [status, setStatus] = useState({
+    status: "idle",
+    progress: 0.0,
+    current_ticker: "",
+    error_message: "",
+    elapsed_seconds: 0
+  });
+
+  // Global results cache
+  const [globalData, setGlobalData] = useState({
+    has_data: false,
+    best_per_ticker: [],
+    tickers_available: [],
+    global_heatmap: []
+  });
+
+  // Interactive selection state
+  const [selectedTicker, setSelectedTicker] = useState("AUBANK.NS");
+  const [tickerCombos, setTickerCombos] = useState([]);
+  const [selectedCombo, setSelectedCombo] = useState({ tp: 5, sl: 10, data: null });
+  const [equityData, setEquityData] = useState(null);
+  const [tradeLogs, setTradeLogs] = useState([]);
+  const [loadingEquity, setLoadingEquity] = useState(false);
+
+  // 1. Check status and fetch initial results on mount
+  useEffect(() => {
+    fetchStatus();
+    fetchGlobalResults();
+  }, []);
+
+  // 2. Poll status when backtest is running
+  useEffect(() => {
+    let interval = null;
+    if (status.status === 'running') {
+      interval = setInterval(() => {
+        fetchStatus();
+      }, 1000);
+    } else if (status.status === 'completed') {
+      // Reload results if it just finished
+      fetchGlobalResults();
+    }
+    return () => clearInterval(interval);
+  }, [status.status]);
+
+  // 3. Re-fetch ticker sweep combos when selected ticker changes
+  useEffect(() => {
+    if (globalData.has_data && selectedTicker) {
+      fetchTickerSweep();
+    }
+  }, [selectedTicker, globalData.has_data]);
+
+  // 4. Re-fetch detailed equity curve when selected combo changes
+  useEffect(() => {
+    if (selectedTicker && selectedCombo.tp && selectedCombo.sl) {
+      fetchEquityCurve();
+    }
+  }, [selectedTicker, selectedCombo.tp, selectedCombo.sl]);
+
+  // API Call: Fetch running status
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/backtest-status`);
+      const data = await res.json();
+      setStatus(data);
+    } catch (e) {
+      console.error("Error fetching status:", e);
+    }
+  };
+
+  // API Call: Fetch global results & leaderboard
+  const fetchGlobalResults = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/results`);
+      const data = await res.json();
+      setGlobalData(data);
+      if (data.has_data && data.tickers_available.length > 0) {
+        // Default to first ticker if none selected or not in list
+        if (!data.tickers_available.includes(selectedTicker)) {
+          setSelectedTicker(data.tickers_available[0]);
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching global results:", e);
+    }
+  };
+
+  // API Call: Fetch all 25 combos for chosen ticker
+  const fetchTickerSweep = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/results/${selectedTicker}`);
+      const data = await res.json();
+      setTickerCombos(data);
+      
+      // Default selected combo to the best one for this ticker
+      if (data.length > 0) {
+        const best = data[0]; // Sorted by win rate descending
+        setSelectedCombo({
+          tp: Math.round(best.tp_pct),
+          sl: Math.round(best.sl_pct),
+          data: best
+        });
+      }
+    } catch (e) {
+      console.error("Error fetching ticker sweep:", e);
+    }
+  };
+
+  // API Call: Fetch equity curve & detailed trade list
+  const fetchEquityCurve = async () => {
+    setLoadingEquity(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/equity-curve/${selectedTicker}/${selectedCombo.tp}/${selectedCombo.sl}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setEquityData(data.equity_curve);
+        setTradeLogs(data.trades);
+      } else {
+        setEquityData(null);
+        setTradeLogs([]);
+      }
+    } catch (e) {
+      console.error("Error fetching equity curve:", e);
+      setEquityData(null);
+      setTradeLogs([]);
+    } finally {
+      setLoadingEquity(false);
+    }
+  };
+
+  // Action: Trigger backtest sweep
+  const handleStartSweep = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/run-backtest`, { method: 'POST' });
+      if (res.ok) {
+        setStatus(prev => ({ ...prev, status: "running", progress: 0.0 }));
+      } else {
+        const err = await res.json();
+        alert(`Failed to start backtest: ${err.detail}`);
+      }
+    } catch (e) {
+      alert(`API Connection Failed. Please ensure backend is running.`);
+    }
+  };
+
+  // Format Elapsed Time
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      
+      {/* ───────────────────────────────────────────────────────────────────────
+          SIDEBAR / STATUS REGION
+          ─────────────────────────────────────────────────────────────────────── */}
+      <aside style={{
+        width: '260px',
+        borderRight: '1px solid var(--border-subtle)',
+        background: 'var(--bg-card-subtle)',
+        padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2rem',
+        flexShrink: 0
+      }}>
+        <div>
+          <h1 style={{ color: 'var(--color-primary)', fontSize: '1.25rem', letterSpacing: '0.05em', lineHeight: '1.2' }}>
+            MAGIC TREND
+          </h1>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.15em' }}>
+            QUANTITATIVE SWEEP
+          </span>
+        </div>
+
+        {/* Dynamic Status Dashboard Card */}
+        <div className="glow-card" style={{ padding: '1.2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: status.status === 'running' ? 'var(--color-primary)' : 
+                          status.status === 'completed' ? 'var(--color-win)' : 'var(--text-dim)',
+              boxShadow: status.status === 'running' ? '0 0 8px var(--color-primary)' : 'none'
+            }} />
+            <span style={{ 
+              fontSize: '0.7rem', 
+              fontFamily: 'var(--font-display)', 
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              color: 'var(--text-main)',
+              letterSpacing: '0.05em'
+            }}>
+              SYSTEM: {status.status}
+            </span>
+          </div>
+
+          {status.status === 'running' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                <span>RUNNING</span>
+                <span>{status.progress}%</span>
+              </div>
+              <div style={{ height: '4px', background: 'rgba(255,255,255,0.03)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: `${status.progress}%`, height: '100%', background: 'var(--color-primary)', boxShadow: '0 0 6px var(--color-primary)' }} />
+              </div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                Ticker: <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{status.current_ticker}</span>
+              </div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                Elapsed: <span style={{ color: 'var(--text-main)' }}>{formatTime(status.elapsed_seconds)}</span>
+              </div>
+            </div>
+          )}
+
+          {status.status === 'error' && (
+            <div style={{ fontSize: '0.7rem', color: 'var(--color-loss)', background: 'var(--color-loss-glow)', padding: '0.5rem', borderRadius: '4px' }}>
+              {status.error_message}
+            </div>
+          )}
+
+          {status.status !== 'running' && (
+            <button 
+              onClick={handleStartSweep} 
+              className="btn-neon-solid"
+              style={{ width: '100%', padding: '0.6rem 0', fontSize: '0.75rem', letterSpacing: '0.05em' }}
+            >
+              START SWEEP RUN
+            </button>
+          )}
+        </div>
+
+        {/* Tab Buttons */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+          <button
+            onClick={() => setActiveTab('explorer')}
+            style={{
+              textAlign: 'left',
+              padding: '0.6rem 0.8rem',
+              borderRadius: '6px',
+              background: activeTab === 'explorer' ? 'rgba(190, 242, 100, 0.05)' : 'transparent',
+              border: 'none',
+              color: activeTab === 'explorer' ? 'var(--color-primary)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 500,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              transition: 'var(--transition-smooth)'
+            }}
+          >
+            <span>PARAMETER EXPLORER</span>
+            {activeTab === 'explorer' && <span style={{ color: 'var(--color-primary)' }}>➔</span>}
+          </button>
+          <button
+            onClick={() => setActiveTab('leaderboard')}
+            style={{
+              textAlign: 'left',
+              padding: '0.6rem 0.8rem',
+              borderRadius: '6px',
+              background: activeTab === 'leaderboard' ? 'rgba(190, 242, 100, 0.05)' : 'transparent',
+              border: 'none',
+              color: activeTab === 'leaderboard' ? 'var(--color-primary)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 500,
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              transition: 'var(--transition-smooth)'
+            }}
+          >
+            <span>TICKER LEADERBOARD</span>
+            {activeTab === 'leaderboard' && <span style={{ color: 'var(--color-primary)' }}>➔</span>}
+          </button>
+        </nav>
+
+        <div style={{ marginTop: 'auto', fontSize: '0.65rem', color: 'var(--text-dim)', textAlign: 'center' }}>
+          v1.0.0 Stable API
+        </div>
+      </aside>
+
+      {/* ───────────────────────────────────────────────────────────────────────
+          MAIN DASHBOARD REGION
+          ─────────────────────────────────────────────────────────────────────── */}
+      <main style={{ flexGrow: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', overflowY: 'auto' }}>
+        
+        {/* Top Summary Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+          <div className="glow-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>TICKERS RUN</span>
+              <h2 style={{ fontSize: '1.5rem', color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                {globalData.has_data ? globalData.tickers_available.length : 0}
+              </h2>
+            </div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-primary)' }}>📊</div>
+          </div>
+
+          <div className="glow-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>AVG SWEEP WIN RATE</span>
+              <h2 style={{ fontSize: '1.5rem', color: 'var(--color-win)', marginTop: '0.2rem' }}>
+                {globalData.has_data && globalData.best_per_ticker.length > 0
+                  ? `${(globalData.best_per_ticker.reduce((acc, c) => acc + c.win_rate, 0) / globalData.best_per_ticker.length).toFixed(1)}%`
+                  : 'N/A'}
+              </h2>
+            </div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-win)' }}>📈</div>
+          </div>
+
+          <div className="glow-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>TOP PERFORMING TICKER</span>
+              <h2 style={{ fontSize: '1.15rem', color: 'var(--color-primary)', marginTop: '0.2rem', fontFamily: 'var(--font-display)', fontWeight: 'bold' }}>
+                {globalData.has_data && globalData.best_per_ticker.length > 0
+                  ? `${globalData.best_per_ticker[0].ticker} (${globalData.best_per_ticker[0].win_rate}%)`
+                  : 'N/A'}
+              </h2>
+            </div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-primary)' }}>🏆</div>
+          </div>
+        </div>
+
+        {/* View Swapping */}
+        {!globalData.has_data && status.status !== 'running' ? (
+          /* Empty State */
+          <div className="glow-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem', gap: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem' }}>🔬</div>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No Sweep Results Cached</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '400px', margin: '0 auto' }}>
+                Click the button in the sidebar to download stock history from FMP API and run the 25 combo grid sweep on all tickers.
+              </p>
+            </div>
+            <button onClick={handleStartSweep} className="btn-neon">Start Backtest Run</button>
+          </div>
+        ) : activeTab === 'leaderboard' ? (
+          /* Leaderboard Table View */
+          <div className="glow-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>BEST OPTIMAL COMBO PER TICKER</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Displays the top performing settings sorted by win rate.</p>
+            </div>
+            <LeaderboardTable 
+              data={globalData.best_per_ticker} 
+              onSelectTicker={(t) => {
+                setSelectedTicker(t);
+                setActiveTab('explorer');
+              }}
+            />
+          </div>
+        ) : (
+          /* Parameter Explorer Grid View */
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+            
+            {/* Split layout: Selector & Heatmap / Detail stats */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+              
+              {/* Left Column: Heatmap controls & cells */}
+              <div className="glow-card" style={{ flex: '1 1 450px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>GRID SEARCH SWEEP</h3>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Select a ticker to explore all 25 TP/SL settings.</p>
+                  </div>
+                  {/* Ticker Selector */}
+                  <select
+                    value={selectedTicker}
+                    onChange={e => setSelectedTicker(e.target.value)}
+                    style={{
+                      background: 'var(--bg-card-subtle)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '0.5rem 1rem',
+                      color: 'var(--text-main)',
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 600,
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {globalData.tickers_available.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <HeatmapGrid 
+                  data={tickerCombos}
+                  selectedCombo={selectedCombo}
+                  onSelectCombo={setSelectedCombo}
+                />
+              </div>
+
+              {/* Right Column: Dynamic selected cell detail dashboard */}
+              <div className="glow-card" style={{ flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                    {selectedTicker} DETAILS
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Config: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>TP {selectedCombo.tp}% / SL {selectedCombo.sl}%</span>
+                  </p>
+                </div>
+
+                {selectedCombo.data ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'space-around' }}>
+                    <ProgressRing 
+                      progress={selectedCombo.data.win_rate} 
+                      label="Win Rate" 
+                      color="var(--color-win)"
+                    />
+                    <ProgressRing 
+                      progress={Math.min(100, Math.max(0, (selectedCombo.data.total_ret + 100) / 2))} 
+                      valueText={`${selectedCombo.data.total_ret}%`}
+                      label="Total Return" 
+                      color="var(--color-primary)"
+                    />
+                    <ProgressRing 
+                      progress={Math.min(100, (selectedCombo.data.cagr / 100) * 100)} 
+                      valueText={`${selectedCombo.data.cagr}%`}
+                      label="CAGR" 
+                      color="var(--color-primary)"
+                    />
+                  </div>
+                ) : (
+                  <div style={{ height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
+                    Loading statistics...
+                  </div>
+                )}
+
+                {selectedCombo.data && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'var(--bg-card-subtle)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>TOTAL TRADES</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>{selectedCombo.data.trades}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>AVG PNL / TRADE</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 'bold', color: selectedCombo.data.avg_pnl >= 0 ? 'var(--color-win)' : 'var(--color-loss)' }}>
+                        {selectedCombo.data.avg_pnl}%
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>MAX DRAWDOWN</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-loss)' }}>-{selectedCombo.data.max_dd}%</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>CALMAR RATIO</span>
+                      <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>{selectedCombo.data.calmar}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Row: Charts displaying Equity curve and Exit Reasons */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+              
+              {/* Equity Line Chart */}
+              <div className="glow-card" style={{ flex: '2 1 500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1rem', color: 'var(--text-main)' }}>HISTORICAL EQUITY CURVE</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mark-to-market performance tracing starting from ₹100,000.</p>
+                </div>
+                {loadingEquity ? (
+                  <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                    Recalculating Equity Curve...
+                  </div>
+                ) : (
+                  <EquityLineChart data={equityData} height={190} />
+                )}
+              </div>
+
+              {/* Exit Reasons Chart */}
+              <div className="glow-card" style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1rem', color: 'var(--text-main)' }}>EXIT DISTRIBUTION</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Categorization of exit reasons for all trades.</p>
+                </div>
+                {selectedCombo.data ? (
+                  <ExitReasonChart 
+                    tp={selectedCombo.data.tp_hits} 
+                    sl={selectedCombo.data.sl_hits} 
+                    score={selectedCombo.data.score_exits} 
+                    time={selectedCombo.data.time_exits} 
+                  />
+                ) : (
+                  <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>
+                    No statistics loaded
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+      </main>
+
+    </div>
+  );
+}
