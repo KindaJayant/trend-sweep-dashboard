@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function HeatmapGrid({ data = [], selectedCombo = null, onSelectCombo }) {
+export default function HeatmapGrid({ data = [], selectedCombo = null, onSelectCombo, slType = 'Fixed' }) {
   // Constants
   const TP_VALUES = [2, 3, 5, 8, 10];
   const SL_VALUES = [5, 10, 15, 20, 25];
@@ -47,22 +47,29 @@ export default function HeatmapGrid({ data = [], selectedCombo = null, onSelectC
       <div />
       
       {/* Heatmap Grid Header: SL % */}
-      {SL_VALUES.map(sl => (
-        <div 
-          key={sl} 
-          style={{ 
-            textAlign: 'center', 
-            fontSize: '0.7rem', 
-            color: 'var(--text-muted)',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 600,
-            padding: '4px 0',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          SL {sl}%
-        </div>
-      ))}
+      {SL_VALUES.map(sl => {
+        let label = `SL ${sl}%`;
+        if (slType === 'ATR-based') {
+          const multMap = { 5: '1.5x', 10: '2.0x', 15: '3.0x', 20: '4.0x', 25: '5.0x' };
+          label = `${multMap[sl] || (sl/5) + 'x'} ATR`;
+        }
+        return (
+          <div 
+            key={sl} 
+            style={{ 
+              textAlign: 'center', 
+              fontSize: '0.7rem', 
+              color: 'var(--text-muted)',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 600,
+              padding: '4px 0',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {label}
+          </div>
+        );
+      })}
 
       {/* Grid Rows */}
       {TP_VALUES.map(tp => (

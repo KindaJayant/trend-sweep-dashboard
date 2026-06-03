@@ -15,6 +15,7 @@ export default function App() {
   const [entryScore, setEntryScore] = useState(7.0);
   const [exitScore, setExitScore] = useState(6.0);
   const [holdDays, setHoldDays] = useState(45);
+  const [slType, setSlType] = useState('Fixed');
 
   // Ticker Scanner states
   const [scannerMode, setScannerMode] = useState('optimal'); // 'optimal' or 'scan'
@@ -64,7 +65,7 @@ export default function App() {
   const fetchScanResults = async () => {
     setLoadingScan(true);
     try {
-      const res = await fetch(`${API_BASE}/api/results/scan/${scanTp}/${scanSl}`);
+      const res = await fetch(`${API_BASE}/api/results/scan-custom?tp=${scanTp}&sl=${scanSl}`);
       if (res.ok) {
         const data = await res.json();
         setScanResults(data);
@@ -197,7 +198,8 @@ export default function App() {
         body: JSON.stringify({
           entry_score: parseFloat(entryScore),
           exit_score: parseFloat(exitScore),
-          hold_days: parseInt(holdDays)
+          hold_days: parseInt(holdDays),
+          sl_type: slType
         })
       });
       if (res.ok) {
@@ -286,9 +288,59 @@ export default function App() {
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '0.05em' }}>
                 STRATEGY PARAMETERS
               </div>
+
+              {/* Stop Loss Type Dropdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Stop Loss Type:</span>
+                </div>
+                <select
+                  value={slType}
+                  onChange={e => setSlType(e.target.value)}
+                  style={{ width: '100%', padding: '0.4rem 2rem 0.4rem 0.8rem', fontSize: '0.75rem', marginTop: '0.2rem' }}
+                >
+                  <option value="Fixed">Fixed Stop Loss</option>
+                  <option value="Trailing">Trailing Stop Loss</option>
+                  <option value="ATR-based">ATR Volatility Stop</option>
+                </select>
+              </div>
+
+              {/* Take Profit (TP %) Slider */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Take Profit (TP %):</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{selectedCombo.tp}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="30.0" 
+                  step="0.5" 
+                  value={selectedCombo.tp} 
+                  onChange={e => setSelectedCombo(prev => ({ ...prev, tp: parseFloat(e.target.value) }))}
+                  style={{ width: '100%', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Stop Loss (SL %) Slider */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Stop Loss (SL %):</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{selectedCombo.sl}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="30.0" 
+                  step="0.5" 
+                  value={selectedCombo.sl} 
+                  onChange={e => setSelectedCombo(prev => ({ ...prev, sl: parseFloat(e.target.value) }))}
+                  style={{ width: '100%', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                />
+              </div>
               
               {/* Entry Score Input */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Entry Score:</span>
                   <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{entryScore}</span>
@@ -543,28 +595,40 @@ export default function App() {
                 </div>
 
                 {scannerMode === 'scan' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {/* TP Dropdown */}
-                    <select
-                      value={scanTp}
-                      onChange={e => setScanTp(parseInt(e.target.value))}
-                      style={{ padding: '0.4rem 2rem 0.4rem 0.8rem', fontSize: '0.7rem' }}
-                    >
-                      {[2, 3, 5, 8, 10].map(tp => (
-                        <option key={tp} value={tp}>TP {tp}%</option>
-                      ))}
-                    </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    {/* TP Slider */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', minWidth: '100px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>TP:</span>
+                        <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{scanTp}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0.5" 
+                        max="30.0" 
+                        step="0.5" 
+                        value={scanTp} 
+                        onChange={e => setScanTp(parseFloat(e.target.value))}
+                        style={{ width: '100px', accentColor: 'var(--color-primary)', cursor: 'pointer', height: '4px' }}
+                      />
+                    </div>
 
-                    {/* SL Dropdown */}
-                    <select
-                      value={scanSl}
-                      onChange={e => setScanSl(parseInt(e.target.value))}
-                      style={{ padding: '0.4rem 2rem 0.4rem 0.8rem', fontSize: '0.7rem' }}
-                    >
-                      {[5, 10, 15, 20, 25].map(sl => (
-                        <option key={sl} value={sl}>SL {sl}%</option>
-                      ))}
-                    </select>
+                    {/* SL Slider */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', minWidth: '100px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>SL:</span>
+                        <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{scanSl}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0.5" 
+                        max="30.0" 
+                        step="0.5" 
+                        value={scanSl} 
+                        onChange={e => setScanSl(parseFloat(e.target.value))}
+                        style={{ width: '100px', accentColor: 'var(--color-primary)', cursor: 'pointer', height: '4px' }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

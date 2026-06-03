@@ -149,7 +149,7 @@ def compute_scores_vectorized(df):
     vol_zl=atr_zl.rolling(150,min_periods=1).max()
     trend=compute_trend_vec(c,zl_s,vol_zl)
     a14=atr_fn(h,l,c,14); a10=atr_fn(h,l,c,10)
-
+    df['atr'] = a14
     a14s=a14.replace(0,np.nan).fillna(1.0)
     a10s=a10.replace(0,np.nan).fillna(1.0)
     ms=mom.rolling(10,min_periods=2).std().replace(0,np.nan).fillna(1.0)
@@ -219,16 +219,20 @@ def compute_scores_vectorized(df):
 # ─────────────────────────────────────────────────────────────────────────────
 # BACKTEST — with option to retrieve full trade list & mark-to-market equity curve
 # ─────────────────────────────────────────────────────────────────────────────
-def run_backtest(ticker, bt, tp_pct, sl_pct, entry_score=SCORE_ENTRY, exit_score=SCORE_EXIT, hold_days=HOLD_DAYS, return_details=False):
+def run_backtest(ticker, bt, tp_pct, sl_pct, entry_score=SCORE_ENTRY, exit_score=SCORE_EXIT, hold_days=HOLD_DAYS, sl_type="Fixed", return_details=False):
     dates  = bt.index.tolist()
     opens  = bt['open'].values
     closes = bt['close'].values
     scores = bt['score'].values
+    atrs   = bt['atr'].values if 'atr' in bt.columns else np.zeros(len(closes))
 
     capital = INITIAL_CAP
     trades = []
     in_trade = False
     entry_price = entry_date = shares_held = None
+    
+    # Track trailing peak price
+    max_price = 0.0
     
     # Mark-to-market daily capital tracing
     daily_equity = []
@@ -253,11 +257,25 @@ def run_backtest(ticker, bt, tp_pct, sl_pct, entry_score=SCORE_ENTRY, exit_score
                 ep=opens[i]; sh=int(capital//ep)
                 if sh==0: continue
                 entry_price=ep; entry_date=dates[i]; shares_held=sh; in_trade=True
+                max_price=closes[i]
             continue
 
         days_cal=(dates[i]-entry_date).days
         cc=closes[i]; sc=scores[i]
-        tp_p=entry_price*(1+tp_pct); sl_p=entry_price*(1-sl_pct)
+        tp_p=entry_price*(1+tp_pct)
+        
+        # Stop Loss Level based on Strategy Selection
+        if sl_type == "Trailing":
+            max_price = max(max_price, cc)
+            sl_p = max_price * (1 - sl_pct)
+        elif sl_type == "ATR-based":
+            # Map SL sweep values (5%, 10%, 15%, 20%, 25%) to ATR multipliers (1.5x, 2.0x, 3.0x, 4.0x, 5.0x)
+            mult_map = {0.05: 1.5, 0.10: 2.0, 0.15: 3.0, 0.20: 4.0, 0.25: 5.0}
+            mult = mult_map.get(round(sl_pct, 2), 2.0)
+            current_atr = atrs[i] if i < len(atrs) else 0.0
+            sl_p = entry_price - (mult * current_atr)
+        else: # Fixed
+            sl_p = entry_price * (1 - sl_pct)
 
         reason=None
         if   cc>=tp_p:              reason="TP"

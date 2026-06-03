@@ -63,8 +63,10 @@ h1, h2, h3, h4, .font-display {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   flex-shrink: 0;
+  overflow-y: auto;
+  height: 100vh;
 }
 
 .app-main {

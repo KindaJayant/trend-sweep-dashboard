@@ -49,12 +49,14 @@ class StrategyParams(BaseModel):
     entry_score: float = 7.0
     exit_score: float = 6.0
     hold_days: int = 45
+    sl_type: str = "Fixed"
 
 # Active strategy settings cache
 STRATEGY_SETTINGS = {
     "entry_score": 7.0,
     "exit_score": 6.0,
-    "hold_days": 45
+    "hold_days": 45,
+    "sl_type": "Fixed"
 }
 
 # Auto-load files on startup if they exist
@@ -82,7 +84,7 @@ load_existing_csvs()
 # ─────────────────────────────────────────────────────────────────────────────
 # BACKGROUND WORKER
 # ─────────────────────────────────────────────────────────────────────────────
-def run_full_sweep_worker(apikey: str, entry_score: float = 7.0, exit_score: float = 6.0, hold_days: int = 45):
+def run_full_sweep_worker(apikey: str, entry_score: float = 7.0, exit_score: float = 6.0, hold_days: int = 45, sl_type: str = "Fixed"):
     global BACKTEST_STATUS, RAW_DATA_STORE, SWEEP_RESULTS, BEST_PER_TICKER
     
     BACKTEST_STATUS["status"] = "running"
@@ -121,7 +123,7 @@ def run_full_sweep_worker(apikey: str, entry_score: float = 7.0, exit_score: flo
                 
                 ticker_results = []
                 for tp_pct, sl_pct in combos:
-                    res = run_backtest(ticker, bt, tp_pct, sl_pct, entry_score=entry_score, exit_score=exit_score, hold_days=hold_days)
+                    res = run_backtest(ticker, bt, tp_pct, sl_pct, entry_score=entry_score, exit_score=exit_score, hold_days=hold_days, sl_type=sl_type)
                     if res:
                         ticker_results.append(res)
                 
@@ -164,14 +166,16 @@ def start_backtest(params: Optional[StrategyParams] = None):
     entry = params.entry_score if params else 7.0
     exit_ = params.exit_score if params else 6.0
     hold = params.hold_days if params else 45
+    sl_type = params.sl_type if params else "Fixed"
     
     global STRATEGY_SETTINGS
     STRATEGY_SETTINGS["entry_score"] = entry
     STRATEGY_SETTINGS["exit_score"] = exit_
     STRATEGY_SETTINGS["hold_days"] = hold
+    STRATEGY_SETTINGS["sl_type"] = sl_type
     
     # Start thread
-    thread = threading.Thread(target=run_full_sweep_worker, args=(FMP_API_KEY, entry, exit_, hold))
+    thread = threading.Thread(target=run_full_sweep_worker, args=(FMP_API_KEY, entry, exit_, hold, sl_type))
     thread.daemon = True
     thread.start()
     return {"message": "Sweep backtest started successfully"}
@@ -204,6 +208,51 @@ def get_results():
         "tickers_available": unique_tickers,
         "global_heatmap": global_heatmap
     }
+
+@app.get("/api/results/scan-custom")
+def scan_custom(tp: float, sl: float):
+    global STRATEGY_SETTINGS, RAW_DATA_STORE
+    
+    results = []
+    tp_pct = tp / 100.0
+    sl_pct = sl / 100.0
+    
+    import concurrent.futures
+    
+    def run_one(ticker):
+        bt = RAW_DATA_STORE.get(ticker)
+        if bt is None:
+            try:
+                ticker_dfs = download_all_data([ticker], FETCH_START, BACKTEST_TO, FMP_API_KEY, "fmp")
+                df = ticker_dfs.get(ticker)
+                if df is not None and len(df) >= 100:
+                    df['score'] = compute_scores_vectorized(df)
+                    bt = df[df.index >= BACKTEST_FROM].copy()
+                    bt.dropna(subset=['score'], inplace=True)
+                    RAW_DATA_STORE[ticker] = bt
+            except Exception as e:
+                print(f"[ON-THE-FLY] Failed for {ticker}: {e}")
+                return None
+        
+        if bt is not None:
+            return run_backtest(
+                ticker, bt, tp_pct, sl_pct,
+                entry_score=STRATEGY_SETTINGS["entry_score"],
+                exit_score=STRATEGY_SETTINGS["exit_score"],
+                hold_days=STRATEGY_SETTINGS["hold_days"],
+                sl_type=STRATEGY_SETTINGS["sl_type"]
+            )
+        return None
+        
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(run_one, t): t for t in TICKERS}
+        for future in concurrent.futures.as_completed(futures):
+            res = future.result()
+            if res:
+                results.append(res)
+                
+    results.sort(key=lambda x: x['win_rate'], reverse=True)
+    return results
 
 @app.get("/api/results/{ticker}")
 def get_ticker_results(ticker: str):
@@ -252,6 +301,7 @@ def get_equity_curve(ticker: str, tp: float, sl: float):
         entry_score=STRATEGY_SETTINGS["entry_score"],
         exit_score=STRATEGY_SETTINGS["exit_score"],
         hold_days=STRATEGY_SETTINGS["hold_days"],
+        sl_type=STRATEGY_SETTINGS["sl_type"],
         return_details=True
     )
     if details is None:
@@ -270,3 +320,4 @@ def scan_tickers(tp: float, sl: float):
     rdf = pd.DataFrame(SWEEP_RESULTS)
     scanned = rdf[(rdf['tp_pct'] == tp) & (rdf['sl_pct'] == sl)].sort_values('win_rate', ascending=False)
     return scanned.to_dict(orient="records")
+
