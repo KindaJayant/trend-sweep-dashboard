@@ -209,13 +209,23 @@ export default function App() {
 
   // Load the best combo from current sweep results for this ticker
   const handleLoadOptimalParams = () => {
-    if (tickerCombos.length > 0) {
-      const best = tickerCombos[0]; // Sorted by win rate descending
-      setSelectedCombo({
-        tp: Math.round(best.tp_pct),
-        sl: Math.round(best.sl_pct),
-        data: best
-      });
+    try {
+      if (Array.isArray(tickerCombos) && tickerCombos.length > 0) {
+        const best = tickerCombos[0];
+        if (best && best.tp_pct !== undefined && best.sl_pct !== undefined) {
+          const tpVal = Math.round(best.tp_pct);
+          const slVal = Math.round(best.sl_pct);
+          if (!isNaN(tpVal) && !isNaN(slVal)) {
+            setSelectedCombo({
+              tp: tpVal,
+              sl: slVal,
+              data: best
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error loading optimal parameters:", e);
     }
   };
 
