@@ -143,14 +143,21 @@ export default function App() {
       const data = await res.json();
       setTickerCombos(data);
       
-      // Default selected combo to the best one for this ticker
       if (data.length > 0) {
-        const best = data[0]; // Sorted by win rate descending
-        setSelectedCombo({
-          tp: Math.round(best.tp_pct),
-          sl: Math.round(best.sl_pct),
-          data: best
-        });
+        // Find if our currently selected TP & SL exists in the new ticker's sweep results
+        const match = data.find(c => Math.round(c.tp_pct) === selectedCombo.tp && Math.round(c.sl_pct) === selectedCombo.sl);
+        if (match) {
+          setSelectedCombo(prev => ({
+            ...prev,
+            data: match
+          }));
+        } else {
+          // Keep the custom selected TP & SL, and let the curve fetcher load stats on-demand
+          setSelectedCombo(prev => ({
+            ...prev,
+            data: null
+          }));
+        }
       }
     } catch (e) {
       console.error("Error fetching ticker sweep:", e);
@@ -184,6 +191,18 @@ export default function App() {
       setTradeLogs([]);
     } finally {
       setLoadingEquity(false);
+    }
+  };
+
+  // Load the best combo from current sweep results for this ticker
+  const handleLoadOptimalParams = () => {
+    if (tickerCombos.length > 0) {
+      const best = tickerCombos[0]; // Sorted by win rate descending
+      setSelectedCombo({
+        tp: Math.round(best.tp_pct),
+        sl: Math.round(best.sl_pct),
+        data: best
+      });
     }
   };
 
@@ -676,15 +695,25 @@ export default function App() {
                     <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>GRID SEARCH SWEEP</h3>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Select a ticker to explore all 25 TP/SL settings.</p>
                   </div>
-                  {/* Ticker Selector */}
-                  <select
-                    value={selectedTicker}
-                    onChange={e => setSelectedTicker(e.target.value)}
-                  >
-                    {globalData.tickers_available.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                  {/* Ticker Selector & Load Optimal button */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button
+                      onClick={handleLoadOptimalParams}
+                      className="btn-neon"
+                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.65rem', textTransform: 'uppercase' }}
+                      title="Load the best performing parameters for this stock"
+                    >
+                      Load Optimal
+                    </button>
+                    <select
+                      value={selectedTicker}
+                      onChange={e => setSelectedTicker(e.target.value)}
+                    >
+                      {globalData.tickers_available.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <HeatmapGrid 

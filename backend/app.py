@@ -205,7 +205,7 @@ def get_results():
     return {
         "has_data": True,
         "best_per_ticker": BEST_PER_TICKER,
-        "tickers_available": unique_tickers,
+        "tickers_available": TICKERS,
         "global_heatmap": global_heatmap
     }
 

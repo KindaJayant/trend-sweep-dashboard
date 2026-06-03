@@ -422,6 +422,11 @@ def fetch_ticker_data(ticker, start_date, end_date, apikey, primary_source="fmp"
 # CONFIG CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 TICKERS = [
+    # US Tech Momentum Leaders
+    "NVDA", "AAPL", "MSFT", "TSLA", "AMD", "META", "AMZN", "AVGO", "NFLX", "SMCI",
+    # Nifty Momentum Giants
+    "RELIANCE.NS", "TATAMOTORS.NS", "TRENT.NS", "HAL.NS", "MAZDOCK.NS", "BEL.NS", "ADANIPORTS.NS", "PFC.NS", "RECLTD.NS", "TCS.NS",
+    # Original List
     "AUBANK.NS","ABCAPITAL.NS","ANANDRATHI.NS","ASIANPAINT.NS","ASTERDM.NS",
     "BSE.NS","BAJFINANCE.NS","BHARTIARTL.NS","CANBK.NS","CHOLAFIN.NS",
     "CUB.NS","CUMMINSIND.NS","EICHERMOT.NS","FEDERALBNK.NS","FORTIS.NS",
