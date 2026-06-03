@@ -259,14 +259,43 @@ def get_ticker_results(ticker: str):
     if not SWEEP_RESULTS:
         load_existing_csvs()
         
-    if not SWEEP_RESULTS:
-        raise HTTPException(status_code=404, detail="No backtest data available. Run sweep first.")
-        
-    # Filter for ticker
-    rdf = pd.DataFrame(SWEEP_RESULTS)
-    ticker_df = rdf[rdf['ticker'].str.upper() == ticker.upper()].sort_values('win_rate', ascending=False)
+    rdf = pd.DataFrame(SWEEP_RESULTS) if SWEEP_RESULTS else pd.DataFrame()
+    ticker_df = pd.DataFrame()
+    if not rdf.empty and 'ticker' in rdf.columns:
+        ticker_df = rdf[rdf['ticker'].str.upper() == ticker.upper()].sort_values('win_rate', ascending=False)
     
     if ticker_df.empty:
+        try:
+            bt = RAW_DATA_STORE.get(ticker)
+            if bt is None:
+                ticker_dfs = download_all_data([ticker], FETCH_START, BACKTEST_TO, FMP_API_KEY, "fmp")
+                df = ticker_dfs.get(ticker)
+                if df is not None and len(df) >= 100:
+                    df['score'] = compute_scores_vectorized(df)
+                    bt = df[df.index >= BACKTEST_FROM].copy()
+                    bt.dropna(subset=['score'], inplace=True)
+                    RAW_DATA_STORE[ticker] = bt
+            
+            if bt is not None:
+                combos = list(product(TP_VALUES, SL_VALUES))
+                ticker_results = []
+                for tp_pct, sl_pct in combos:
+                    res = run_backtest(
+                        ticker, bt, tp_pct, sl_pct,
+                        entry_score=STRATEGY_SETTINGS["entry_score"],
+                        exit_score=STRATEGY_SETTINGS["exit_score"],
+                        hold_days=STRATEGY_SETTINGS["hold_days"],
+                        sl_type=STRATEGY_SETTINGS["sl_type"]
+                    )
+                    if res:
+                        ticker_results.append(res)
+                
+                if ticker_results:
+                    ticker_results.sort(key=lambda x: x['win_rate'], reverse=True)
+                    return ticker_results
+        except Exception as e:
+            print(f"[ON-THE-FLY SWEEP] Failed for {ticker}: {e}")
+            
         raise HTTPException(status_code=404, detail=f"No results found for ticker {ticker}")
         
     return ticker_df.to_dict(orient="records")
