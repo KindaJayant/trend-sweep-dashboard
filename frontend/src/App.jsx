@@ -899,10 +899,10 @@ export default function App() {
                             fontWeight: 500,
                             color: trade.reason === 'TP' ? 'var(--color-win)' :
                                    trade.reason === 'SL' ? 'var(--color-loss)' :
-                                   trade.reason === 'Score<6' ? 'var(--color-score)' : 'var(--color-time)'
+                                   trade.reason.startsWith('Score<') ? 'var(--color-score)' : 'var(--color-time)'
                           }}>
-                            {trade.reason === 'Score<6' ? 'Indicator Exit' :
-                             trade.reason === 'Time45' ? 'Max Hold Limit' : trade.reason}
+                            {trade.reason.startsWith('Score<') ? 'Indicator Exit' :
+                             trade.reason.startsWith('Time') ? 'Max Hold Limit' : trade.reason}
                           </td>
                           <td>₹{Math.round(trade.capital_after || 0).toLocaleString()}</td>
                         </tr>
