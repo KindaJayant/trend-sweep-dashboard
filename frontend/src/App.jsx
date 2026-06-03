@@ -140,27 +140,40 @@ export default function App() {
   const fetchTickerSweep = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/results/${selectedTicker}`);
-      const data = await res.json();
-      setTickerCombos(data);
-      
-      if (data.length > 0) {
-        // Find if our currently selected TP & SL exists in the new ticker's sweep results
-        const match = data.find(c => Math.round(c.tp_pct) === selectedCombo.tp && Math.round(c.sl_pct) === selectedCombo.sl);
-        if (match) {
-          setSelectedCombo(prev => ({
-            ...prev,
-            data: match
-          }));
-        } else {
-          // Keep the custom selected TP & SL, and let the curve fetcher load stats on-demand
-          setSelectedCombo(prev => ({
-            ...prev,
-            data: null
-          }));
+      if (res.ok) {
+        const data = await res.json();
+        setTickerCombos(data);
+        
+        if (data.length > 0) {
+          // Find if our currently selected TP & SL exists in the new ticker's sweep results
+          const match = data.find(c => Math.round(c.tp_pct) === selectedCombo.tp && Math.round(c.sl_pct) === selectedCombo.sl);
+          if (match) {
+            setSelectedCombo(prev => ({
+              ...prev,
+              data: match
+            }));
+          } else {
+            // Keep the custom selected TP & SL, and let the curve fetcher load stats on-demand
+            setSelectedCombo(prev => ({
+              ...prev,
+              data: null
+            }));
+          }
         }
+      } else {
+        setTickerCombos([]);
+        setSelectedCombo(prev => ({
+          ...prev,
+          data: null
+        }));
       }
     } catch (e) {
       console.error("Error fetching ticker sweep:", e);
+      setTickerCombos([]);
+      setSelectedCombo(prev => ({
+        ...prev,
+        data: null
+      }));
     }
   };
 

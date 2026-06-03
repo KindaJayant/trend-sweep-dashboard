@@ -5,13 +5,15 @@ export default function HeatmapGrid({ data = [], selectedCombo = null, onSelectC
   const TP_VALUES = [2, 3, 5, 8, 10];
   const SL_VALUES = [5, 10, 15, 20, 25];
 
+  const safeData = Array.isArray(data) ? data : [];
+
   // Helper to find data point
   const getCellData = (tp, sl) => {
-    return data.find(d => Math.round(d.tp_pct) === tp && Math.round(d.sl_pct) === sl);
+    return safeData.find(d => Math.round(d.tp_pct) === tp && Math.round(d.sl_pct) === sl);
   };
 
   // Find min/max win rate to normalize colors
-  const winRates = data.map(d => d.win_rate).filter(w => w !== undefined);
+  const winRates = safeData.map(d => d.win_rate).filter(w => w !== undefined);
   const minWR = winRates.length > 0 ? Math.min(...winRates) : 0;
   const maxWR = winRates.length > 0 ? Math.max(...winRates) : 100;
   const wrRange = maxWR - minWR || 1;
