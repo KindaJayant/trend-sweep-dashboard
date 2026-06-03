@@ -11,6 +11,18 @@ export default function App() {
   // Main Navigation State
   const [activeTab, setActiveTab] = useState('explorer'); // 'explorer' or 'leaderboard'
   
+  // Strategy settings input state
+  const [entryScore, setEntryScore] = useState(7.0);
+  const [exitScore, setExitScore] = useState(6.0);
+  const [holdDays, setHoldDays] = useState(45);
+
+  // Ticker Scanner states
+  const [scannerMode, setScannerMode] = useState('optimal'); // 'optimal' or 'scan'
+  const [scanTp, setScanTp] = useState(2);
+  const [scanSl, setScanSl] = useState(10);
+  const [scanResults, setScanResults] = useState([]);
+  const [loadingScan, setLoadingScan] = useState(false);
+  
   // Backtest status state
   const [status, setStatus] = useState({
     status: "idle",
@@ -41,6 +53,31 @@ export default function App() {
     fetchStatus();
     fetchGlobalResults();
   }, []);
+
+  // 1.1 Fetch scan results when scan configuration changes
+  useEffect(() => {
+    if (activeTab === 'leaderboard' && scannerMode === 'scan') {
+      fetchScanResults();
+    }
+  }, [activeTab, scannerMode, scanTp, scanSl]);
+
+  const fetchScanResults = async () => {
+    setLoadingScan(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/results/scan/${scanTp}/${scanSl}`);
+      if (res.ok) {
+        const data = await res.json();
+        setScanResults(data);
+      } else {
+        setScanResults([]);
+      }
+    } catch (e) {
+      console.error("Error scanning tickers:", e);
+      setScanResults([]);
+    } finally {
+      setLoadingScan(false);
+    }
+  };
 
   // 2. Poll status when backtest is running
   useEffect(() => {
@@ -152,7 +189,17 @@ export default function App() {
   // Action: Trigger backtest sweep
   const handleStartSweep = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/run-backtest`, { method: 'POST' });
+      const res = await fetch(`${API_BASE}/api/run-backtest`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          entry_score: parseFloat(entryScore),
+          exit_score: parseFloat(exitScore),
+          hold_days: parseInt(holdDays)
+        })
+      });
       if (res.ok) {
         setStatus(prev => ({ ...prev, status: "running", progress: 0.0 }));
       } else {
@@ -235,10 +282,69 @@ export default function App() {
           )}
 
           {status.status !== 'running' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.8rem', marginTop: '0.4rem' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '0.05em' }}>
+                STRATEGY PARAMETERS
+              </div>
+              
+              {/* Entry Score Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Entry Score:</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{entryScore}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="5.0" 
+                  max="9.0" 
+                  step="0.1" 
+                  value={entryScore} 
+                  onChange={e => setEntryScore(parseFloat(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Exit Score Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Exit Score:</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{exitScore}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="4.0" 
+                  max="8.0" 
+                  step="0.1" 
+                  value={exitScore} 
+                  onChange={e => setExitScore(parseFloat(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Hold Days Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Max Hold Time:</span>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{holdDays} Days</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="10" 
+                  max="90" 
+                  step="5" 
+                  value={holdDays} 
+                  onChange={e => setHoldDays(parseInt(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {status.status !== 'running' && (
             <button 
               onClick={handleStartSweep} 
               className="btn-neon-solid"
-              style={{ width: '100%', padding: '0.6rem 0', fontSize: '0.75rem', letterSpacing: '0.05em' }}
+              style={{ width: '100%', padding: '0.6rem 0', fontSize: '0.75rem', letterSpacing: '0.05em', marginTop: '0.5rem' }}
             >
               START SWEEP RUN
             </button>
@@ -385,17 +491,112 @@ export default function App() {
         ) : activeTab === 'leaderboard' ? (
           /* Leaderboard Table View */
           <div className="glow-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>BEST OPTIMAL COMBO PER TICKER</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Displays the top performing settings sorted by win rate.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                  {scannerMode === 'optimal' ? "BEST OPTIMAL COMBO PER TICKER" : "CROSS-TICKER PARAMETER SCANNER"}
+                </h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {scannerMode === 'optimal' 
+                    ? "Displays the top performing settings sorted by win rate." 
+                    : `Displays stock rankings for TP ${scanTp}% and SL ${scanSl}%.`}
+                </p>
+              </div>
+
+              {/* Mode Toggle & Scan Parameters Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                  <button 
+                    onClick={() => setScannerMode('optimal')}
+                    style={{
+                      background: scannerMode === 'optimal' ? 'var(--color-primary)' : 'transparent',
+                      color: scannerMode === 'optimal' ? 'var(--bg-primary)' : 'var(--text-muted)',
+                      border: 'none',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                  >
+                    BEST OPTIMAL
+                  </button>
+                  <button 
+                    onClick={() => setScannerMode('scan')}
+                    style={{
+                      background: scannerMode === 'scan' ? 'var(--color-primary)' : 'transparent',
+                      color: scannerMode === 'scan' ? 'var(--bg-primary)' : 'var(--text-muted)',
+                      border: 'none',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                  >
+                    SCAN COMBO
+                  </button>
+                </div>
+
+                {scannerMode === 'scan' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {/* TP Dropdown */}
+                    <select
+                      value={scanTp}
+                      onChange={e => setScanTp(parseInt(e.target.value))}
+                      style={{ padding: '0.4rem 2rem 0.4rem 0.8rem', fontSize: '0.7rem' }}
+                    >
+                      {[2, 3, 5, 8, 10].map(tp => (
+                        <option key={tp} value={tp}>TP {tp}%</option>
+                      ))}
+                    </select>
+
+                    {/* SL Dropdown */}
+                    <select
+                      value={scanSl}
+                      onChange={e => setScanSl(parseInt(e.target.value))}
+                      style={{ padding: '0.4rem 2rem 0.4rem 0.8rem', fontSize: '0.7rem' }}
+                    >
+                      {[5, 10, 15, 20, 25].map(sl => (
+                        <option key={sl} value={sl}>SL {sl}%</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
-            <LeaderboardTable 
-              data={globalData.best_per_ticker} 
-              onSelectTicker={(t) => {
-                setSelectedTicker(t);
-                setActiveTab('explorer');
-              }}
-            />
+
+            {scannerMode === 'optimal' ? (
+              <LeaderboardTable 
+                data={globalData.best_per_ticker} 
+                onSelectTicker={(t) => {
+                  setSelectedTicker(t);
+                  setActiveTab('explorer');
+                }}
+              />
+            ) : loadingScan ? (
+              <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                Scanning stocks for parameters...
+              </div>
+            ) : (
+              <LeaderboardTable 
+                data={scanResults} 
+                onSelectTicker={(t) => {
+                  setSelectedTicker(t);
+                  // Setup combo to match scanned parameters
+                  setSelectedCombo(prev => ({
+                    ...prev,
+                    tp: scanTp,
+                    sl: scanSl
+                  }));
+                  setActiveTab('explorer');
+                }}
+              />
+            )}
           </div>
         ) : (
           /* Parameter Explorer Grid View */

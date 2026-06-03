@@ -219,7 +219,7 @@ def compute_scores_vectorized(df):
 # ─────────────────────────────────────────────────────────────────────────────
 # BACKTEST — with option to retrieve full trade list & mark-to-market equity curve
 # ─────────────────────────────────────────────────────────────────────────────
-def run_backtest(ticker, bt, tp_pct, sl_pct, return_details=False):
+def run_backtest(ticker, bt, tp_pct, sl_pct, entry_score=SCORE_ENTRY, exit_score=SCORE_EXIT, hold_days=HOLD_DAYS, return_details=False):
     dates  = bt.index.tolist()
     opens  = bt['open'].values
     closes = bt['close'].values
@@ -249,7 +249,7 @@ def run_backtest(ticker, bt, tp_pct, sl_pct, return_details=False):
 
         if not in_trade:
             # Entry condition
-            if i>=2 and scores[i-2]<=SCORE_ENTRY and scores[i-1]>SCORE_ENTRY:
+            if i>=2 and scores[i-2]<=entry_score and scores[i-1]>entry_score:
                 ep=opens[i]; sh=int(capital//ep)
                 if sh==0: continue
                 entry_price=ep; entry_date=dates[i]; shares_held=sh; in_trade=True
@@ -262,11 +262,11 @@ def run_backtest(ticker, bt, tp_pct, sl_pct, return_details=False):
         reason=None
         if   cc>=tp_p:              reason="TP"
         elif cc<=sl_p:              reason="SL"
-        elif sc<SCORE_EXIT:         reason="Score<6"
-        elif days_cal>=HOLD_DAYS:   reason="Time45"
+        elif sc<exit_score:         reason=f"Score<{exit_score}"
+        elif days_cal>=hold_days:   reason=f"Time{hold_days}"
 
         if reason:
-            if reason=="Time45":
+            if reason==f"Time{hold_days}":
                 xp=cc; xd=dates[i]
             else:
                 xp=opens[i+1] if i+1<len(dates) else cc
@@ -331,8 +331,8 @@ def run_backtest(ticker, bt, tp_pct, sl_pct, return_details=False):
         'calmar'      : round(calmar,2),
         'tp_hits'     : int((tdf['reason']=='TP').sum()),
         'sl_hits'     : int((tdf['reason']=='SL').sum()),
-        'score_exits' : int((tdf['reason']=='Score<6').sum()),
-        'time_exits'  : int((tdf['reason']=='Time45').sum()),
+        'score_exits' : int((tdf['reason']==f"Score<{exit_score}").sum()),
+        'time_exits'  : int((tdf['reason']==f"Time{hold_days}").sum()),
     }
     
     if return_details:

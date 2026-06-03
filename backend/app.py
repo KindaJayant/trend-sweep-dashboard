@@ -43,6 +43,20 @@ BACKTEST_STATUS = {
     "elapsed_seconds": 0
 }
 
+from pydantic import BaseModel
+
+class StrategyParams(BaseModel):
+    entry_score: float = 7.0
+    exit_score: float = 6.0
+    hold_days: int = 45
+
+# Active strategy settings cache
+STRATEGY_SETTINGS = {
+    "entry_score": 7.0,
+    "exit_score": 6.0,
+    "hold_days": 45
+}
+
 # Auto-load files on startup if they exist
 def load_existing_csvs():
     global SWEEP_RESULTS, BEST_PER_TICKER
@@ -68,7 +82,7 @@ load_existing_csvs()
 # ─────────────────────────────────────────────────────────────────────────────
 # BACKGROUND WORKER
 # ─────────────────────────────────────────────────────────────────────────────
-def run_full_sweep_worker(apikey: str):
+def run_full_sweep_worker(apikey: str, entry_score: float = 7.0, exit_score: float = 6.0, hold_days: int = 45):
     global BACKTEST_STATUS, RAW_DATA_STORE, SWEEP_RESULTS, BEST_PER_TICKER
     
     BACKTEST_STATUS["status"] = "running"
@@ -107,7 +121,7 @@ def run_full_sweep_worker(apikey: str):
                 
                 ticker_results = []
                 for tp_pct, sl_pct in combos:
-                    res = run_backtest(ticker, bt, tp_pct, sl_pct)
+                    res = run_backtest(ticker, bt, tp_pct, sl_pct, entry_score=entry_score, exit_score=exit_score, hold_days=hold_days)
                     if res:
                         ticker_results.append(res)
                 
@@ -143,12 +157,21 @@ def run_full_sweep_worker(apikey: str):
 # ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
 @app.post("/api/run-backtest")
-def start_backtest():
+def start_backtest(params: Optional[StrategyParams] = None):
     if BACKTEST_STATUS["status"] == "running":
         raise HTTPException(status_code=400, detail="Backtest sweep is already running")
         
+    entry = params.entry_score if params else 7.0
+    exit_ = params.exit_score if params else 6.0
+    hold = params.hold_days if params else 45
+    
+    global STRATEGY_SETTINGS
+    STRATEGY_SETTINGS["entry_score"] = entry
+    STRATEGY_SETTINGS["exit_score"] = exit_
+    STRATEGY_SETTINGS["hold_days"] = hold
+    
     # Start thread
-    thread = threading.Thread(target=run_full_sweep_worker, args=(FMP_API_KEY,))
+    thread = threading.Thread(target=run_full_sweep_worker, args=(FMP_API_KEY, entry, exit_, hold))
     thread.daemon = True
     thread.start()
     return {"message": "Sweep backtest started successfully"}
@@ -224,8 +247,26 @@ def get_equity_curve(ticker: str, tp: float, sl: float):
     tp_pct = tp / 100.0
     sl_pct = sl / 100.0
     
-    details = run_backtest(ticker, bt, tp_pct, sl_pct, return_details=True)
+    details = run_backtest(
+        ticker, bt, tp_pct, sl_pct,
+        entry_score=STRATEGY_SETTINGS["entry_score"],
+        exit_score=STRATEGY_SETTINGS["exit_score"],
+        hold_days=STRATEGY_SETTINGS["hold_days"],
+        return_details=True
+    )
     if details is None:
         raise HTTPException(status_code=400, detail="No trades taken for this combination.")
         
     return details
+
+@app.get("/api/results/scan/{tp}/{sl}")
+def scan_tickers(tp: float, sl: float):
+    if not SWEEP_RESULTS:
+        load_existing_csvs()
+        
+    if not SWEEP_RESULTS:
+        raise HTTPException(status_code=404, detail="No backtest results found. Run sweep first.")
+        
+    rdf = pd.DataFrame(SWEEP_RESULTS)
+    scanned = rdf[(rdf['tp_pct'] == tp) & (rdf['sl_pct'] == sl)].sort_values('win_rate', ascending=False)
+    return scanned.to_dict(orient="records")
